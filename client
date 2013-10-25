@@ -1,0 +1,104 @@
+#define _CRT_SECURE_NO_DEPRECATE
+
+#include <stdio.h> 
+#include <stdlib.h>
+#include <winsock2.h>
+#include <iostream>
+using namespace std;
+#define SERVER_PORT 5208 //侦听端口
+
+#pragma comment(lib,"wsock32.lib")
+
+int main()
+{
+	WORD wVersionRequested;
+	WSADATA wsaData;
+	int ret,flag,i;
+	SOCKET sClient; //连接套接字
+	struct sockaddr_in saServer; //地址信息
+	char *ptr;
+	BOOL fSuccess = TRUE;
+	//WinSock初始化
+	wVersionRequested = MAKEWORD(2, 2); //希望使用的WinSock DLL的版本
+	ret = WSAStartup(wVersionRequested, &wsaData);
+	if(ret!=0)
+	{
+        printf("WSAStartup() failed!\n");
+        return 5;
+	}
+	//确认WinSock DLL支持版本2.2
+	if(LOBYTE(wsaData.wVersion)!=2 || HIBYTE(wsaData.wVersion)!=2)
+	{
+        WSACleanup();
+        printf("Invalid WinSock version!\n");
+        return 4;
+	}
+	//创建Socket,使用TCP协议
+	sClient = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+	if (sClient == INVALID_SOCKET)
+	{
+        WSACleanup();
+        printf("socket() failed!\n");
+        return 3;
+	}
+	//构建服务器地址信息
+	saServer.sin_family = AF_INET; //地址家族
+	saServer.sin_port = htons(SERVER_PORT); //注意转化为网络节序
+	saServer.sin_addr.S_un.S_addr = inet_addr("127.0.0.1");
+	//连接服务器
+	ret = connect(sClient, (struct sockaddr *)&saServer, sizeof(saServer));
+	if (ret == SOCKET_ERROR)
+	{
+        printf("connect() failed!\n");
+        closesocket(sClient); //关闭套接字
+        WSACleanup();
+        return 2;
+	}
+ 
+	char sendMessage[]="Hello this is client message.Here's Roy speaking!\n"; 
+	ret = send (sClient, (char *)&sendMessage, sizeof(sendMessage), 0);
+	char message[100],message2[100],receivemessage[100];
+	if (ret == SOCKET_ERROR)
+		{
+			printf("send() failed!\n");
+			return 1;
+		}
+	while(1)
+	{
+		printf("1.just listen\t2.say something: ");
+		scanf("%d",&flag);
+		if(flag == 2)
+		{
+			if (ret == SOCKET_ERROR)
+			{
+				printf("send() failed!\n");
+				return 1;
+			}
+			printf("\nEnter what you wanna say:\n");
+			
+			/*scanf("%s",message);
+			printf("%s",message);*/
+
+			getchar();
+			gets(message);
+			ret = send (sClient, (char *)&message, sizeof(message), 0);
+			if (ret == SOCKET_ERROR)
+			{
+				printf("send() failed!\n");
+				return 1;
+			}
+		}
+		if(flag == 1)
+		{
+			ret = recv(sClient, receivemessage, 100, 0);
+			if (ret == SOCKET_ERROR)
+			{
+				printf("send() failed!\n");
+				return 1;
+			}
+			printf("Server said:  %s\n",receivemessage);
+		}
+	}
+	closesocket(sClient); //关闭套接字
+	WSACleanup();
+}
